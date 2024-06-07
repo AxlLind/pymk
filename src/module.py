@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Sequence
 from collections import defaultdict
 
+class PymkException(Exception):
+    pass
+
 class Target:
     cmd: str
     output: Path
@@ -49,7 +52,7 @@ def substitute_vars(var_maps: list[dict[str, str]], s: str) -> str:
         for var_map in var_maps:
             if val := var_map.get(var):
                 return val
-        raise Exception(f'Tried to replace unset variable "${var}"')
+        raise PymkException(f'Unset variable "${var}"')
 
     return VAR_SUBST_REGEX.sub(get_variable, s)
 
@@ -68,7 +71,7 @@ def set_variable(**variables: str) -> None:
 def register_targets(*targets: PhonyTarget) -> None:
     for target in targets:
         if target.name in TARGETS:
-            raise Exception(f'Target "{target.name}" defined multiple times')
+            raise PymkException(f'Target "{target.name}" defined multiple times')
         TARGETS[target.name] = target
 
 def build_execution_dag(targets: list[str]) -> tuple[list[Dependency], dict[str | Path, set[TargetType]]]:
@@ -99,16 +102,16 @@ def run_target(target: Dependency) -> Dependency:
     match target:
         case Path():
             if not target.exists():
-                raise Exception(f'File dependency "{target}" does not exist.')
+                raise PymkException(f'File dependency "{target}" does not exist.')
         case Target():
             exitcode = execute_command(expand_cmd(target))
             if exitcode != 0:
-                raise Exception(f'Target "{target.output}" failed. ({exitcode=})')
+                raise PymkException(f'Target "{target.output}" failed. ({exitcode=})')
         case PhonyTarget():
             if target.cmd:
                 exitcode = execute_command(expand_cmd(target))
                 if exitcode != 0:
-                    raise Exception(f'Target "{target.name}" failed. ({exitcode=})')
+                    raise PymkException(f'Target "{target.name}" failed. ({exitcode=})')
     return target
 
 def execute_targets(jobs: int, targets: list[str]) -> None:
@@ -135,6 +138,6 @@ def run() -> None:
     opts = parser.parse_args()
     try:
         execute_targets(opts.jobs, opts.targets)
-    except Exception as e:
+    except PymkException as e:
         print(f'pymk failure: {e}')
         sys.exit(1)
