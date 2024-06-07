@@ -66,9 +66,12 @@ def expand_cmd(t: TargetType) -> str:
     var_maps = [{k:' '.join(str(x) for x in v) for k,v in t.depends.items()}, VARIABLES]
     return substitute_vars(var_maps, t.cmd)
 
-def execute_command(cmd: str) -> int:
+def execute_target_command(t: TargetType) -> None:
+    cmd = expand_cmd(t)
     print(cmd)
-    return subprocess.run('bash', input=cmd.encode('utf-8')).returncode
+    exitcode = subprocess.run('bash', input=cmd.encode('utf-8')).returncode
+    if exitcode != 0:
+        raise PymkException(f'Target "{t}" failed. ({exitcode=})')
 
 def set_variable(**variables: str) -> None:
     VARIABLES.update(variables)
@@ -109,14 +112,10 @@ def run_target(target: Dependency) -> Dependency:
             if not target.exists():
                 raise PymkException(f'File dependency "{target}" does not exist.')
         case Target():
-            exitcode = execute_command(expand_cmd(target))
-            if exitcode != 0:
-                raise PymkException(f'Target "{target.output}" failed. ({exitcode=})')
+            execute_target_command(target)
         case PhonyTarget():
             if target.cmd:
-                exitcode = execute_command(expand_cmd(target))
-                if exitcode != 0:
-                    raise PymkException(f'Target "{target.name}" failed. ({exitcode=})')
+                execute_target_command(target)
     return target
 
 def execute_targets(jobs: int, targets: list[str]) -> None:
