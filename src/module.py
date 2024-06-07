@@ -1,9 +1,11 @@
+import re
+import sys
 import argparse
 import subprocess
-import re
+import concurrent.futures
 from pathlib import Path
 from typing import Sequence
-from collections import defaultdict, deque
+from collections import defaultdict
 
 class Target:
     cmd: str
@@ -69,7 +71,7 @@ def register_targets(*targets: PhonyTarget) -> None:
             raise Exception(f'Target "{target.name}" defined multiple times')
         TARGETS[target.name] = target
 
-def build_execution_dag(targets: list[str]) -> tuple[list[Dependency], dict[str | Path, set[Dependency]]]:
+def build_execution_dag(targets: list[str]) -> tuple[list[Dependency], dict[str | Path, set[TargetType]]]:
     leafs: list[Dependency] = []
     dag: defaultdict[str | Path, set[Dependency]] = defaultdict(set)
     seen: set[TargetType] = set()
@@ -93,7 +95,7 @@ def build_execution_dag(targets: list[str]) -> tuple[list[Dependency], dict[str 
         add_dependencies(TARGETS[t])
     return leafs, dict(dag)
 
-def run_target(target: Dependency) -> None:
+def run_target(target: Dependency) -> Dependency:
     match target:
         case Path():
             if not target.exists():
@@ -103,29 +105,36 @@ def run_target(target: Dependency) -> None:
             if exitcode != 0:
                 raise Exception(f'Target "{target.output}" failed. ({exitcode=})')
         case PhonyTarget():
-            if not target.cmd:
-                return
-            exitcode = execute_command(expand_cmd(target))
-            if exitcode != 0:
-                raise Exception(f'Target "{target.name}" failed. ({exitcode=})')
+            if target.cmd:
+                exitcode = execute_command(expand_cmd(target))
+                if exitcode != 0:
+                    raise Exception(f'Target "{target.name}" failed. ({exitcode=})')
+    return target
+
+def execute_targets(jobs: int, targets: list[str]) -> None:
+    leafs, exec_dag = build_execution_dag(targets)
+
+    deps_left: dict[TargetType, int] = {}
+    with concurrent.futures.ProcessPoolExecutor(max_workers=jobs if jobs > 0 else None) as executor:
+        left = set(executor.submit(run_target, leaf) for leaf in leafs)
+        while left:
+            done, left = concurrent.futures.wait(left, return_when=concurrent.futures.FIRST_COMPLETED)
+            for f in done:
+                t = f.result()
+                for dependant in exec_dag.get(str(t), set()):
+                    if dependant not in deps_left:
+                        deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
+                    deps_left[dependant] -= 1
+                    if not deps_left[dependant]:
+                        left.add(executor.submit(run_target, dependant))
 
 def run() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument('-j', '--jobs', type=int, default=0, help='number of parallel jobs (0=infinite)')
     parser.add_argument('targets', nargs='+', choices=list(TARGETS.keys()))
     opts = parser.parse_args()
-
-    leafs, exec_dag = build_execution_dag(opts.targets)
-    print([str(l) for l in leafs])
-
-    m: dict[TargetType, int] = {}
-    queue = deque(leafs)
-    while queue:
-        t = queue.pop()
-        run_target(t)
-        for dependant in exec_dag.get(str(t), set()):
-            assert not isinstance(dependant, Path)
-            if dependant not in m:
-                m[dependant] = sum(len(x) for x in dependant.depends.values())
-            m[dependant] -= 1
-            if not m[dependant]:
-                queue.append(dependant)
+    try:
+        execute_targets(opts.jobs, opts.targets)
+    except Exception as e:
+        print(f'pymk failure: {e}')
+        sys.exit(1)
