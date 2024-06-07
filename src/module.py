@@ -10,15 +10,20 @@ from collections import defaultdict
 class PymkException(Exception):
     pass
 
+def simplify_dependency_input(depends: 'Dependency' | Sequence['Dependency'] | dict[str, 'Dependency' | Sequence['Dependency']]) -> dict[str, list['Dependency']]:
+    if isinstance(depends, dict):
+        return {k:list(v if isinstance(v,Sequence) else [v]) for k, v in depends.items()}
+    return {'__pymk_default_key__': list(depends) if isinstance(depends,Sequence) else [depends]}
+
 class Target:
     cmd: str
     output: Path
     depends: dict[str, list['Dependency']]
 
-    def __init__(self, cmd: str, output: Path, depends: dict[str, 'Dependency' | Sequence['Dependency']]) -> None:
+    def __init__(self, cmd: str, output: Path, depends: 'Dependency' | Sequence['Dependency'] | dict[str, 'Dependency' | Sequence['Dependency']]) -> None:
         self.cmd = cmd
         self.output = output
-        self.depends = {k:list(v if isinstance(v,Sequence) else [v]) for k, v in depends.items()}
+        self.depends = simplify_dependency_input(depends)
 
     def __str__(self) -> str:
         return str(self.output)
@@ -28,10 +33,10 @@ class PhonyTarget:
     cmd: str | None
     depends: dict[str, list['Dependency']]
 
-    def __init__(self, name: str, cmd: str | None = None, depends: dict[str, 'Dependency' | Sequence['Dependency']] = {}) -> None:
+    def __init__(self, name: str, cmd: str | None = None, depends: 'Dependency' | Sequence['Dependency'] | dict[str, 'Dependency' | Sequence['Dependency']] = {}) -> None:
         self.name = name
         self.cmd = cmd
-        self.depends = {k:list(v if isinstance(v,Sequence) else [v]) for k, v in depends.items()}
+        self.depends = simplify_dependency_input(depends)
 
     def __str__(self) -> str:
         return self.name
@@ -76,7 +81,7 @@ def register_targets(*targets: PhonyTarget) -> None:
 
 def build_execution_dag(targets: list[str]) -> tuple[list[Dependency], dict[str | Path, set[TargetType]]]:
     leafs: list[Dependency] = []
-    dag: defaultdict[str | Path, set[Dependency]] = defaultdict(set)
+    dag: defaultdict[str | Path, set[TargetType]] = defaultdict(set)
     seen: set[TargetType] = set()
 
     def add_dependencies(target: TargetType) -> None:
