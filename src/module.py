@@ -6,6 +6,7 @@ import concurrent.futures
 from pathlib import Path
 from typing import Sequence, TypeAlias
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, Future
 
 TargetType:      TypeAlias = 'Target  | PhonyTarget'
 Dependency:      TypeAlias = 'Target  | PhonyTarget | Path'
@@ -48,6 +49,49 @@ class PhonyTarget:
 VARIABLES: dict[str, str] = {}
 TARGETS: dict[str, PhonyTarget] = {}
 
+class Executor:
+    executor: ThreadPoolExecutor
+    futures: set[Future[TargetType]]
+    deps_left: dict[TargetType, int]
+
+    def __init__(self, jobs: int) -> None:
+        self.executor = ThreadPoolExecutor(max_workers=jobs if jobs > 0 else None)
+        self.futures = set()
+        self.deps_left = {}
+
+    def exec_command(self, t: TargetType) -> None:
+        self.futures.add(self.executor.submit(execute_target_command, t))
+
+    def on_finished(self, t: Dependency) -> None:
+        for dependant in self.exec_dag.get(str(t), set()):
+            if dependant not in self.deps_left:
+                self.deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
+            self.deps_left[dependant] -= 1
+            if not self.deps_left[dependant]:
+                self.run_target(dependant)
+
+    def run_target(self, target: Dependency) -> None:
+        match target:
+            case Path():
+                if not target.exists():
+                    raise PymkException(f'File dependency "{target}" does not exist.')
+            case Target():
+                return self.exec_command(target)
+            case PhonyTarget():
+                if target.cmd:
+                    return self.exec_command(target)
+        self.on_finished(target)
+
+    def execute_targets(self, targets: list[str]) -> None:
+        leafs, self.exec_dag = build_execution_dag(targets)
+        with self.executor:
+            for leaf in leafs:
+                self.run_target(leaf)
+            while self.futures:
+                done, self.futures = concurrent.futures.wait(self.futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for f in done:
+                    self.on_finished(f.result())
+
 VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9]+)')
 
 def expand_cmd(t: TargetType) -> str:
@@ -63,12 +107,13 @@ def expand_cmd(t: TargetType) -> str:
     assert t.cmd
     return VAR_SUBST_REGEX.sub(get_variable, t.cmd)
 
-def execute_target_command(t: TargetType) -> None:
+def execute_target_command(t: TargetType) -> TargetType:
     cmd = expand_cmd(t)
     print(cmd)
     exitcode = subprocess.run('bash', input=cmd.encode('utf-8')).returncode
     if exitcode != 0:
         raise PymkException(f'Target "{t}" failed. ({exitcode=})')
+    return t
 
 def set_variable(**variables: str) -> None:
     VARIABLES.update(variables)
@@ -103,42 +148,14 @@ def build_execution_dag(targets: list[str]) -> tuple[list[Dependency], dict[str 
         add_dependencies(TARGETS[t])
     return leafs, dict(dag)
 
-def run_target(target: Dependency) -> Dependency:
-    match target:
-        case Path():
-            if not target.exists():
-                raise PymkException(f'File dependency "{target}" does not exist.')
-        case Target():
-            execute_target_command(target)
-        case PhonyTarget():
-            if target.cmd:
-                execute_target_command(target)
-    return target
-
-def execute_targets(jobs: int, targets: list[str]) -> None:
-    leafs, exec_dag = build_execution_dag(targets)
-
-    deps_left: dict[TargetType, int] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs if jobs > 0 else None) as executor:
-        left = set(executor.submit(run_target, leaf) for leaf in leafs)
-        while left:
-            done, left = concurrent.futures.wait(left, return_when=concurrent.futures.FIRST_COMPLETED)
-            for f in done:
-                t = f.result()
-                for dependant in exec_dag.get(str(t), set()):
-                    if dependant not in deps_left:
-                        deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
-                    deps_left[dependant] -= 1
-                    if not deps_left[dependant]:
-                        left.add(executor.submit(run_target, dependant))
-
 def run() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('-j', '--jobs', type=int, default=0, help='number of parallel jobs (0=infinite)')
     parser.add_argument('targets', nargs='+', choices=list(TARGETS.keys()))
     opts = parser.parse_args()
     try:
-        execute_targets(opts.jobs, opts.targets)
+        executor = Executor(opts.jobs)
+        executor.execute_targets(opts.targets)
     except PymkException as e:
         print(f'pymk failure: {e}')
         sys.exit(1)
