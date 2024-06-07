@@ -1,0 +1,24 @@
+[project]
+name = "pymk"
+version = "0.0.1"
+authors = [
+  { name="Axel Lindeberg" },
+]
+description = "A make-style build system as a python library"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[build-system]
+requires = ["setuptools>=68.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"pymk" = ["py.typed"]
+
+[tool.setuptools.package-dir]
+pymk = "src"
