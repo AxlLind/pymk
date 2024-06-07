@@ -49,22 +49,18 @@ TARGETS: dict[str, PhonyTarget] = {}
 
 VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9]+)')
 
-def substitute_vars(var_maps: list[dict[str, str]], s: str) -> str:
+def expand_cmd(t: TargetType) -> str:
     def get_variable(m: re.Match[str]) -> str:
         var = m.group(1)
         if var == '$':
             return '$'
-        for var_map in var_maps:
-            if val := var_map.get(var):
-                return val
+        if dep := t.depends.get(var):
+            return ' '.join(str(x) for x in dep)
+        if val := VARIABLES.get(var):
+            return val
         raise PymkException(f'Unset variable "${var}"')
-
-    return VAR_SUBST_REGEX.sub(get_variable, s)
-
-def expand_cmd(t: TargetType) -> str:
     assert t.cmd
-    var_maps = [{k:' '.join(str(x) for x in v) for k,v in t.depends.items()}, VARIABLES]
-    return substitute_vars(var_maps, t.cmd)
+    return VAR_SUBST_REGEX.sub(get_variable, t.cmd)
 
 def execute_target_command(t: TargetType) -> None:
     cmd = expand_cmd(t)
