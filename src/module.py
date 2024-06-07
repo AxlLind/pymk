@@ -4,13 +4,17 @@ import argparse
 import subprocess
 import concurrent.futures
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, TypeAlias
 from collections import defaultdict
+
+TargetType:      TypeAlias = 'Target  | PhonyTarget'
+Dependency:      TypeAlias = 'Target  | PhonyTarget | Path'
+DependencyInput: TypeAlias = Dependency | Sequence[Dependency] | dict[str, Dependency | Sequence[Dependency]]
 
 class PymkException(Exception):
     pass
 
-def simplify_dependency_input(depends: 'Dependency' | Sequence['Dependency'] | dict[str, 'Dependency' | Sequence['Dependency']]) -> dict[str, list['Dependency']]:
+def simplify_dependency_input(depends: DependencyInput) -> dict[str, list[Dependency]]:
     if isinstance(depends, dict):
         return {k:list(v if isinstance(v,Sequence) else [v]) for k, v in depends.items()}
     return {'__pymk_default_key__': list(depends) if isinstance(depends,Sequence) else [depends]}
@@ -18,9 +22,9 @@ def simplify_dependency_input(depends: 'Dependency' | Sequence['Dependency'] | d
 class Target:
     cmd: str
     output: Path
-    depends: dict[str, list['Dependency']]
+    depends: dict[str, list[Dependency]]
 
-    def __init__(self, cmd: str, output: Path, depends: 'Dependency' | Sequence['Dependency'] | dict[str, 'Dependency' | Sequence['Dependency']]) -> None:
+    def __init__(self, cmd: str, output: Path, depends: DependencyInput) -> None:
         self.cmd = cmd
         self.output = output
         self.depends = simplify_dependency_input(depends)
@@ -31,18 +35,15 @@ class Target:
 class PhonyTarget:
     name: str
     cmd: str | None
-    depends: dict[str, list['Dependency']]
+    depends: dict[str, list[Dependency]]
 
-    def __init__(self, name: str, cmd: str | None = None, depends: 'Dependency' | Sequence['Dependency'] | dict[str, 'Dependency' | Sequence['Dependency']] = {}) -> None:
+    def __init__(self, name: str, cmd: str | None = None, depends: DependencyInput = {}) -> None:
         self.name = name
         self.cmd = cmd
         self.depends = simplify_dependency_input(depends)
 
     def __str__(self) -> str:
         return self.name
-
-TargetType = Target | PhonyTarget
-Dependency = TargetType | Path
 
 VARIABLES: dict[str, str] = {}
 TARGETS: dict[str, PhonyTarget] = {}
@@ -118,7 +119,7 @@ def execute_targets(jobs: int, targets: list[str]) -> None:
     leafs, exec_dag = build_execution_dag(targets)
 
     deps_left: dict[TargetType, int] = {}
-    with concurrent.futures.ProcessPoolExecutor(max_workers=jobs if jobs > 0 else None) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs if jobs > 0 else None) as executor:
         left = set(executor.submit(run_target, leaf) for leaf in leafs)
         while left:
             done, left = concurrent.futures.wait(left, return_when=concurrent.futures.FIRST_COMPLETED)
