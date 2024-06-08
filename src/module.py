@@ -74,26 +74,25 @@ def execute_target_command(t: TargetType) -> TargetType:
     return t
 
 def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[str, list[TargetType]], list[Dependency]]:
-    leafs = list[Dependency]()
     dag = dict[str, list[TargetType]]()
-    seen = set[Dependency]()
+    leafs = list[Dependency]()
 
-    def add_dependencies(target: Dependency) -> None:
-        if target in seen:
-            return
-        seen.add(target)
-        if isinstance(target, Path) or not target.depends:
-            return leafs.append(target)
-        for dependencies in target.depends.values():
-            for t in dependencies:
-                key = str(t)
+    seen = set[Dependency]()
+    q = collections.deque[Dependency](targets)
+    while q:
+        t = q.pop()
+        seen.add(t)
+        if isinstance(t, Path) or not t.depends:
+            leafs.append(t)
+            continue
+        for dependencies in t.depends.values():
+            for target in dependencies:
+                key = str(target)
                 if key not in dag:
                     dag[key] = []
-                dag[key].append(target)
-                add_dependencies(t)
-
-    for t in targets:
-        add_dependencies(t)
+                dag[key].append(t)
+                if target not in seen:
+                    q.append(target)
     return dag, leafs
 
 class TargetExecutor:
