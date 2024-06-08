@@ -8,17 +8,20 @@ from pathlib import Path
 from typing import Sequence, TypeAlias
 from concurrent.futures import ThreadPoolExecutor, Future, FIRST_COMPLETED
 
-TargetType:      TypeAlias = 'Target  | PhonyTarget'
-Dependency:      TypeAlias = 'Target  | PhonyTarget | Path'
+TargetType: TypeAlias = 'Target  | PhonyTarget'
+Dependency: TypeAlias = 'Target  | PhonyTarget | Path'
 DependencyInput: TypeAlias = Dependency | Sequence[Dependency] | dict[str, Dependency | Sequence[Dependency]]
+
 
 class PymkException(Exception):
     pass
 
+
 def simplify_dependency_input(depends: DependencyInput) -> dict[str, list[Dependency]]:
     if isinstance(depends, dict):
-        return {k:list(v if isinstance(v,Sequence) else [v]) for k, v in depends.items()}
-    return {'__pymk_default_key__': list(depends) if isinstance(depends,Sequence) else [depends]}
+        return {k: list(v if isinstance(v, Sequence) else [v]) for k, v in depends.items()}
+    return {'__pymk_default_key__': list(depends) if isinstance(depends, Sequence) else [depends]}
+
 
 class Target:
     cmd: str
@@ -33,6 +36,7 @@ class Target:
     def __str__(self) -> str:
         return str(self.output)
 
+
 class PhonyTarget:
     name: str
     cmd: str | None
@@ -46,11 +50,14 @@ class PhonyTarget:
     def __str__(self) -> str:
         return self.name
 
+
 VARIABLES = dict[str, str]()
 VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9]+)')
 
+
 def set_variable(**variables: str) -> None:
     VARIABLES.update(variables)
+
 
 def expand_cmd(t: TargetType) -> str:
     def get_variable(m: re.Match[str]) -> str:
@@ -62,8 +69,10 @@ def expand_cmd(t: TargetType) -> str:
         if val := VARIABLES.get(var):
             return val
         raise PymkException(f'Unset variable "${var}"')
+
     assert t.cmd
     return VAR_SUBST_REGEX.sub(get_variable, t.cmd)
+
 
 def execute_target_command(t: TargetType) -> TargetType:
     cmd = expand_cmd(t)
@@ -72,6 +81,7 @@ def execute_target_command(t: TargetType) -> TargetType:
     if exitcode != 0:
         raise PymkException(f'Target "{t}" failed. ({exitcode=})')
     return t
+
 
 def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[str, list[TargetType]], list[Dependency]]:
     dag = dict[str, list[TargetType]]()
@@ -94,6 +104,7 @@ def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[str, list[Targ
                 if target not in seen:
                     q.append(target)
     return dag, leafs
+
 
 class TargetExecutor:
     executor: ThreadPoolExecutor
@@ -139,6 +150,7 @@ class TargetExecutor:
                 done, self.futures = concurrent.futures.wait(self.futures, return_when=FIRST_COMPLETED)
                 for f in done:
                     self.on_finished(f.result())
+
 
 def run(*targets: PhonyTarget) -> None:
     known_targets = dict[str, PhonyTarget]()
