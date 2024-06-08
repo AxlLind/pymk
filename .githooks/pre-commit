@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
+python3 -m mypy src/
+python3 -m ruff check
+python3 -m ruff format --check
