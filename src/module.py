@@ -83,8 +83,8 @@ def execute_target_command(t: TargetType) -> TargetType:
     return t
 
 
-def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[str, list[TargetType]], list[Dependency]]:
-    dag = dict[str, list[TargetType]]()
+def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[Dependency, list[TargetType]], list[Dependency]]:
+    dag = dict[Dependency, list[TargetType]]()
     leafs = list[Dependency]()
 
     seen = set[Dependency]()
@@ -97,10 +97,9 @@ def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[str, list[Targ
             continue
         for dependencies in t.depends.values():
             for target in dependencies:
-                key = str(target)
-                if key not in dag:
-                    dag[key] = []
-                dag[key].append(t)
+                if target not in dag:
+                    dag[target] = []
+                dag[target].append(t)
                 if target not in seen:
                     q.append(target)
     return dag, leafs
@@ -109,7 +108,7 @@ def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[str, list[Targ
 class TargetExecutor:
     executor: ThreadPoolExecutor
     futures: set[Future[TargetType]]
-    dependants: dict[str, list[TargetType]]
+    dependants: dict[Dependency, list[TargetType]]
     deps_left: dict[TargetType, int]
 
     def __init__(self, jobs: int) -> None:
@@ -122,7 +121,7 @@ class TargetExecutor:
         self.futures.add(self.executor.submit(execute_target_command, t))
 
     def on_finished(self, t: Dependency) -> None:
-        for dependant in self.dependants.get(str(t), []):
+        for dependant in self.dependants.get(t, []):
             if dependant not in self.deps_left:
                 self.deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
             self.deps_left[dependant] -= 1
