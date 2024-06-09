@@ -190,6 +190,24 @@ class TargetExecutor:
                     self.on_finished(f.result())
 
 
+def exit_help(targets: Sequence[PhonyTarget], error: str | None = None) -> None:
+    print(f'usage: {sys.argv[0]} [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..')
+    if error:
+        print('error:', error)
+        sys.exit(2)
+    print()
+    print('TARGET:')
+    maxlen = max(len(t.name) for t in targets)
+    for t in targets:
+        print(f'  {t.name.ljust(maxlen)}  {t.help if t.help else ""}')
+    print()
+    print('OPTIONS:')
+    print('  -j, --jobs JOBS        number of parallel jobs (default 0=infinite)')
+    print('  -D, --var VAR[=VALUE]  set a variable, example -DCC=gcc-11')
+    print('  -h, --help             print this help message and exit')
+    sys.exit(0)
+
+
 def run(*targets: PhonyTarget) -> None:
     known_targets = dict[str, PhonyTarget]()
     for t in targets:
@@ -198,30 +216,23 @@ def run(*targets: PhonyTarget) -> None:
         known_targets[str(t)] = t
 
     if any(h in sys.argv[1:] for h in ['-h', '--help']):
-        print(f'usage: {sys.argv[0]} [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..')
-        print()
-        print('TARGET:')
-        maxlen = max(len(t.name) for t in targets)
-        for t in targets:
-            print(f'  {t.name.ljust(maxlen)}  {t.help if t.help else ""}')
-        print()
-        print('OPTIONS:')
-        print('  -j, --jobs JOBS        number of parallel jobs (default 0=infinite)')
-        print('  -D, --var VAR[=VALUE]  set a variable, example -DCC=gcc-11')
-        print('  -h, --help             print this help message and exit')
-        sys.exit(0)
+        exit_help(targets)
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-j', '--jobs', type=int, default=0)
     parser.add_argument('-D', '--var', action='append', default=[])
-    parser.add_argument('targets', nargs='+', choices=known_targets.keys())
+    parser.add_argument('targets', nargs='*')
     opts = parser.parse_args()
 
-    extra_vars = dict[str, str]()
+    if not opts.targets:
+        exit_help(targets, 'no target given')
+    for t in opts.targets:
+        if t not in known_targets:
+            exit_help(targets, f'unknown target "{t}"')
+
     for s in opts.var:
         var, *rest = s.split('=', maxsplit=1)
-        extra_vars[var] = rest[0] if rest else ''
-    set_variable(**extra_vars)
+        set_variable(**{var: rest[0] if rest else ''})
 
     try:
         executor = TargetExecutor(opts.jobs)
