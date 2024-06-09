@@ -208,7 +208,20 @@ def exit_help(targets: Sequence[PhonyTarget], error: str | None = None) -> None:
     sys.exit(0)
 
 
-def main(*targets: PhonyTarget) -> None:
+def run(jobs: int, targets: list[PhonyTarget]) -> int:
+    try:
+        executor = TargetExecutor(jobs)
+        executor.execute(targets)
+    except PymkException as e:
+        print('pymk:', e)
+        return 1
+    except KeyboardInterrupt:
+        print('pymk: interrupt')
+        return 130
+    return 0
+
+
+def main(targets: list[PhonyTarget]) -> None:
     known_targets = dict[str, PhonyTarget]()
     for t in targets:
         if str(t) in known_targets:
@@ -233,13 +246,4 @@ def main(*targets: PhonyTarget) -> None:
     for s in opts.var:
         var, *rest = s.split('=', maxsplit=1)
         set_variable(**{var: rest[0] if rest else ''})
-
-    try:
-        executor = TargetExecutor(opts.jobs)
-        executor.execute([known_targets[t] for t in opts.targets])
-    except PymkException as e:
-        print('pymk:', e)
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print('pymk: interrupt')
-        sys.exit(130)
+    sys.exit(run(opts.jobs, [known_targets[t] for t in opts.targets]))
