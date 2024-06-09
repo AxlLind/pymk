@@ -41,11 +41,19 @@ class PhonyTarget:
     name: str
     cmd: str | None
     depends: dict[str, list[Dependency]]
+    help: str | None
 
-    def __init__(self, name: str, cmd: str | None = None, depends: DependencyInput = {}) -> None:
+    def __init__(
+        self,
+        name: str,
+        cmd: str | None = None,
+        depends: DependencyInput = {},
+        help: str | None = None,
+    ) -> None:
         self.name = name
         self.cmd = cmd
         self.depends = simplify_dependency_input(depends)
+        self.help = help
 
     def __str__(self) -> str:
         return self.name
@@ -189,9 +197,23 @@ def run(*targets: PhonyTarget) -> None:
             raise PymkException(f'Target "{t}" defined multiple times')
         known_targets[str(t)] = t
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-j', '--jobs', type=int, default=0, help='number of parallel jobs (default 0=infinite)')
-    parser.add_argument('-D', '--var', action='append', default=[], help='Set a variable, (example -DCC=gcc)')
+    if any(h in sys.argv[1:] for h in ['-h', '--help']):
+        print(f'usage: {sys.argv[0]} [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..')
+        print()
+        print('TARGET:')
+        maxlen = max(len(t.name) for t in targets)
+        for t in targets:
+            print(f'  {t.name.ljust(maxlen)}  {t.help if t.help else ""}')
+        print()
+        print('OPTIONS:')
+        print('  -j, --jobs JOBS        number of parallel jobs (default 0=infinite)')
+        print('  -D, --var VAR[=VALUE]  set a variable, example -DCC=gcc-11')
+        print('  -h, --help             print this help message and exit')
+        sys.exit(0)
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-j', '--jobs', type=int, default=0)
+    parser.add_argument('-D', '--var', action='append', default=[])
     parser.add_argument('targets', nargs='+', choices=known_targets.keys())
     opts = parser.parse_args()
 
