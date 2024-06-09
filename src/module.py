@@ -191,8 +191,15 @@ def run(*targets: PhonyTarget) -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-j', '--jobs', type=int, default=0, help='number of parallel jobs (default 0=infinite)')
+    parser.add_argument('-D', '--var', action='append', default=[], help='Specify a variable, (example -DCC=gcc)')
     parser.add_argument('targets', nargs='+', choices=known_targets.keys())
     opts = parser.parse_args()
+
+    extra_vars = dict[str, str]()
+    for s in opts.var:
+        var, *rest = s.split('=', maxsplit=1)
+        extra_vars[var] = rest[0] if rest else ''
+    set_variable(**extra_vars)
 
     try:
         executor = TargetExecutor(opts.jobs)
