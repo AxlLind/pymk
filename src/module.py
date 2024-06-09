@@ -89,9 +89,10 @@ def modified_time(t: Path | Target) -> int:
 
 
 def up_to_date(t: Target, modified_times: dict[Path | Target, int]) -> bool:
-    if not t.output.exists() or not t.depends:
+    try:
+        mtime = modified_time(t)
+    except FileNotFoundError:
         return False
-    mtime = modified_time(t)
     modified_times[t] = mtime
     for dependencies in t.depends.values():
         for dep in dependencies:
