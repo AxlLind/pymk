@@ -52,7 +52,7 @@ class PhonyTarget:
 
 
 VARIABLES = dict[str, str]()
-VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9]+)')
+VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9]+|\([A-Za-z0-9]+\))')
 
 
 def set_variable(**variables: str) -> None:
@@ -61,7 +61,7 @@ def set_variable(**variables: str) -> None:
 
 def expand_cmd(t: TargetType) -> str:
     def get_variable(m: re.Match[str]) -> str:
-        var = m.group(1)
+        var = m.group(1).replace('(', '').replace(')', '')
         if var == '$':
             return '$'
         if dep := t.depends.get(var):
