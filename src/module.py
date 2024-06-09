@@ -83,6 +83,25 @@ def execute_target_command(t: TargetType) -> TargetType:
     return t
 
 
+def modified_time(t: Path | Target) -> int:
+    f = t if isinstance(t, Path) else t.output
+    return f.stat().st_mtime_ns
+
+
+def up_to_date(t: Target) -> bool:
+    if not t.output.exists() or not t.depends:
+        return False
+    mtime = modified_time(t)
+    for dependencies in t.depends.values():
+        for dep in dependencies:
+            if isinstance(dep, PhonyTarget):
+                return False
+            time = modified_time(dep)
+            if time > mtime:
+                return False
+    return True
+
+
 def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[Dependency, list[TargetType]], list[Dependency]]:
     dag = dict[Dependency, list[TargetType]]()
     leafs = list[Dependency]()
@@ -128,17 +147,18 @@ class TargetExecutor:
             if not self.deps_left[dependant]:
                 self.run_target(dependant)
 
-    def run_target(self, target: Dependency) -> None:
-        match target:
+    def run_target(self, t: Dependency) -> None:
+        match t:
             case Path():
-                if not target.exists():
-                    raise PymkException(f'File dependency "{target}" does not exist.')
+                if not t.exists():
+                    raise PymkException(f'File dependency "{t}" does not exist.')
             case Target():
-                return self.exec_command(target)
+                if not up_to_date(t):
+                    return self.exec_command(t)
             case PhonyTarget():
-                if target.cmd:
-                    return self.exec_command(target)
-        self.on_finished(target)
+                if t.cmd:
+                    return self.exec_command(t)
+        self.on_finished(t)
 
     def execute(self, targets: list[PhonyTarget]) -> None:
         self.dependants, leafs = build_execution_dag(targets)
