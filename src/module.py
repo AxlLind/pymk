@@ -88,15 +88,16 @@ def modified_time(t: Path | Target) -> int:
     return f.stat().st_mtime_ns
 
 
-def up_to_date(t: Target) -> bool:
+def up_to_date(t: Target, modified_times: dict[Path | Target, int]) -> bool:
     if not t.output.exists() or not t.depends:
         return False
     mtime = modified_time(t)
+    modified_times[t] = mtime
     for dependencies in t.depends.values():
         for dep in dependencies:
             if isinstance(dep, PhonyTarget):
                 return False
-            time = modified_time(dep)
+            time = modified_times[dep]
             if time > mtime:
                 return False
     return True
@@ -129,12 +130,14 @@ class TargetExecutor:
     futures: set[Future[TargetType]]
     dependants: dict[Dependency, list[TargetType]]
     deps_left: dict[TargetType, int]
+    modified_times: dict[Path | Target, int]
 
     def __init__(self, jobs: int) -> None:
         self.executor = ThreadPoolExecutor(max_workers=jobs if jobs > 0 else None)
         self.futures = set()
         self.dependants = {}
         self.deps_left = {}
+        self.modified_times = {}
 
     def exec_command(self, t: TargetType) -> None:
         self.futures.add(self.executor.submit(execute_target_command, t))
@@ -142,6 +145,8 @@ class TargetExecutor:
     def on_finished(self, t: Dependency) -> None:
         if isinstance(t, Target) and not t.output.exists():
             raise PymkException(f'Target {t} did not create expected output file')
+        if not isinstance(t, PhonyTarget):
+            self.modified_times[t] = modified_time(t)
         for dependant in self.dependants.get(t, []):
             if dependant not in self.deps_left:
                 self.deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
@@ -155,7 +160,7 @@ class TargetExecutor:
                 if not t.exists():
                     raise PymkException(f'File dependency "{t}" does not exist.')
             case Target():
-                if not up_to_date(t):
+                if not up_to_date(t, self.modified_times):
                     return self.exec_command(t)
             case PhonyTarget():
                 if t.cmd:
