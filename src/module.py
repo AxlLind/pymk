@@ -66,10 +66,10 @@ def expand_cmd(t: TargetType) -> str:
             return '$'
         if var == 'OUTPUT' and isinstance(t, Target):
             return str(t.output)
-        if dep := t.depends.get(var):
-            return ' '.join(str(x) for x in dep)
-        if val := VARIABLES.get(var):
-            return val
+        if var in t.depends:
+            return ' '.join(str(x) for x in t.depends[var])
+        if var in VARIABLES:
+            return VARIABLES[var]
         raise PymkException(f'Unset variable "${var}"')
 
     assert t.cmd
@@ -191,7 +191,7 @@ def run(*targets: PhonyTarget) -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-j', '--jobs', type=int, default=0, help='number of parallel jobs (default 0=infinite)')
-    parser.add_argument('-D', '--var', action='append', default=[], help='Specify a variable, (example -DCC=gcc)')
+    parser.add_argument('-D', '--var', action='append', default=[], help='Set a variable, (example -DCC=gcc)')
     parser.add_argument('targets', nargs='+', choices=known_targets.keys())
     opts = parser.parse_args()
 
