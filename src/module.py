@@ -64,6 +64,8 @@ def expand_cmd(t: TargetType) -> str:
         var = m.group(1).replace('(', '').replace(')', '')
         if var == '$':
             return '$'
+        if var == 'OUTPUT' and isinstance(t, Target):
+            return str(t.output)
         if dep := t.depends.get(var):
             return ' '.join(str(x) for x in dep)
         if val := VARIABLES.get(var):
