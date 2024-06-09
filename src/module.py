@@ -143,10 +143,11 @@ class TargetExecutor:
         self.futures.add(self.executor.submit(execute_target_command, t))
 
     def on_finished(self, t: Dependency) -> None:
-        if isinstance(t, Target) and not t.output.exists():
-            raise PymkException(f'Target {t} did not create expected output file')
         if not isinstance(t, PhonyTarget):
-            self.modified_times[t] = modified_time(t)
+            try:
+                self.modified_times[t] = modified_time(t)
+            except FileNotFoundError:
+                raise PymkException(f'Expected {t} to exist')
         for dependant in self.dependants.get(t, []):
             if dependant not in self.deps_left:
                 self.deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
