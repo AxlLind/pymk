@@ -91,7 +91,6 @@ def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[Dependency, li
     q = collections.deque[Dependency](targets)
     while q:
         t = q.pop()
-        seen.add(t)
         if isinstance(t, Path) or not t.depends:
             leafs.append(t)
             continue
@@ -101,6 +100,7 @@ def build_execution_dag(targets: list[PhonyTarget]) -> tuple[dict[Dependency, li
                     dag[target] = []
                 dag[target].append(t)
                 if target not in seen:
+                    seen.add(target)
                     q.append(target)
     return dag, leafs
 
