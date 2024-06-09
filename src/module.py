@@ -208,7 +208,7 @@ def exit_help(targets: Sequence[PhonyTarget], error: str | None = None) -> None:
     sys.exit(0)
 
 
-def run(*targets: PhonyTarget) -> None:
+def main(*targets: PhonyTarget) -> None:
     known_targets = dict[str, PhonyTarget]()
     for t in targets:
         if str(t) in known_targets:
