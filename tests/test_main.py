@@ -1,9 +1,5 @@
-import sys
 import io
 from contextlib import redirect_stdout
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent.parent))
 
 import src as pymk
 from src import PhonyTarget
