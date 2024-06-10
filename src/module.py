@@ -28,7 +28,7 @@ class Target:
     output: Path
     depends: dict[str, list[Dependency]]
 
-    def __init__(self, cmd: str, output: Path, depends: DependencyInput) -> None:
+    def __init__(self, cmd: str, output: Path, depends: DependencyInput = {}) -> None:
         self.cmd = cmd
         self.output = output
         self.depends = simplify_dependency_input(depends)
