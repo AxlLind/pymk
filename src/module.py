@@ -60,7 +60,7 @@ class PhonyTarget:
 
 
 VARIABLES = dict[str, str]()
-VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9]+|\([A-Za-z0-9]+\))')
+VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9_]+|\([A-Za-z0-9_]+\))')
 
 
 def set_variable(**variables: str) -> None:
