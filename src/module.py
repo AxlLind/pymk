@@ -238,7 +238,7 @@ def main(targets: list[PhonyTarget]) -> None:
     opts = parser.parse_args()
 
     if not opts.targets:
-        exit_help(targets, 'no target given')
+        exit_help(targets)
     for t in opts.targets:
         if t not in known_targets:
             exit_help(targets, f'unknown target "{t}"')
