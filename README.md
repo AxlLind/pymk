@@ -15,7 +15,9 @@ What would this look like for a simple C project?
 import pymk
 from pymk import Target, PhonyTarget
 from pathlib import Path
+from os import chdir
 
+chdir(Path(__file__).parent)
 BUILD_DIR = Path('out')
 BUILD_DIR.mkdir(exist_ok=True)
 
@@ -34,7 +36,7 @@ def obj_target(c_file: Path) -> Target:
 objs = [obj_target(c_file) for c_file in Path('src').glob('*.c')]
 executable = Target(
     cmd='$CC $CFLAGS $OBJS -o $OUTPUT',
-    depends={'OBJS': [objs]},
+    depends={'OBJS': objs},
     output=BUILD_DIR / 'binary',
 )
 
@@ -43,7 +45,7 @@ def lint_file(f: Path) -> PhonyTarget:
 
 lint_all = [lint_file(f) for f in Path('.').glob('**/*.[ch]')]
 
-pymk.run([
+pymk.main([
     PhonyTarget('build', help='Build binary',          depends=executable),
     PhonyTarget('lint',  help='Lint all source files', depends=lint_all),
 ])
