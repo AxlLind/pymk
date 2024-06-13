@@ -1,11 +1,11 @@
 # pymk - a make-inspired python library and build system
-> What if `make` was just a Python library and your build system was just a Python file?
+> What if "make" was just a Python library and your build system was just a Python file?
 
-While `make` certainly is powerful, it's syntax and odd quirks makes it a pain to scale to larger projects. Often I've found as the project scales you eventually just want a damn programming language in your build system.
+While `make` certainly is powerful, it's syntax and odd quirks makes it a pain to scale to larger projects and confusing for new developers.
 
 `pymk` is just a Python library.
 
-You write your entire build system as a Python script which defines your targets and dependencies, and `pymk` builds your targets efficiently. This means defining special logic, which eventually always happens as your project becomes more complicated, means just writing regular Python code. No bash, no unintuitive string handling in make, and no godawful what-ever CMake tries to be.
+You write your entire build system as a Python script which defines your targets and dependencies, and `pymk` builds your targets efficiently. This means defining special logic, which eventually always happens as your project becomes more complicated, means just writing regular Python code. No bash, no unintuitive string handling in make, no new made-up programming language that sucks, and no godawful what-ever CMake tries to be. Just Python.
 
 ## Example
 What would this look like for a simple C project?
