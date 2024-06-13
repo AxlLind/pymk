@@ -46,18 +46,17 @@ def test_var_expansion(tmpdir: Path) -> None:
                 PhonyTarget('2', cmd='echo $A$B$C > /dev/null'),
                 PhonyTarget('3', cmd='echo $(A)aa > /dev/null'),
                 PhonyTarget('4', cmd='echo $A/next/to/path > /dev/null'),
-                PhonyTarget('5', cmd='echo expansion at the end > $DEV_NULL'),
-                PhonyTarget('6', cmd='$ECHO > $DEV_NULL'),
+                PhonyTarget('6', cmd='$ECHO expansions at edges > $DEV_NULL'),
             ]
         )
         assert status == 0
         assert f'touch {tmpdir / "tmp.txt"}' in output
+        assert f'echo {tmpdir / "tmp.txt"} > /dev/null' in output
         assert 'echo $VAR > /dev/null' in output
         assert 'echo abc > /dev/null' in output
         assert 'echo aaa > /dev/null' in output
         assert 'echo a/next/to/path > /dev/null' in output
-        assert 'echo expansion at the end > /dev/null' in output
-        assert 'echo > /dev/null' in output
+        assert 'echo expansions at edges > /dev/null' in output
 
     status, output = run_pymk([PhonyTarget('a', cmd='echo $UNSET_VAR > /dev/null')])
     assert status != 0
