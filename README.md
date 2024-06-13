@@ -1,5 +1,5 @@
 # pymk - a make-inspired python library and build system
-> What if "make" was just a Python library and your build system was just a Python file?
+> What if your build system was just a Python script?
 
 While `make` certainly is powerful, it's syntax and odd quirks makes it a pain to scale to larger projects and confusing for new developers.
 
@@ -21,7 +21,7 @@ BUILD_DIR.mkdir(exist_ok=True)
 
 pymk.set_variable(
     CC='clang',
-    CFLAGS='-O3 -Wall -Wextra -Werror',
+    CFLAGS='-std=c11 -O3 -Wall -Wextra -Werror',
 )
 
 def obj_target(c_file: Path) -> Target:
@@ -44,3 +44,19 @@ pymk.run([PhonyTarget('build', help='Build binary', depends=executable)])
 You would build the project simply: `./build.py build`
 
 Like `make`, `pymk` only rebuilds what it has to and implements the same up-to-date check algorithm as `make`.
+
+---
+
+Need to select a different compiler based on the OS? Just write some damn Python code:
+
+```python
+import sys
+
+if sys.platform == 'win32':
+    CC = 'cl.exe'
+    CFLAGS = '/std:c11 /O3 /W4'
+else:
+    CC = 'gcc'
+    CFLAGS = '-std=c11 -O3 -Wall -Wextra -Werror'
+pymk.set_variable(CC=CC, CFLAGS=CFLAGS)
+```
