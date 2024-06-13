@@ -38,10 +38,18 @@ executable = Target(
     output=BUILD_DIR / 'binary',
 )
 
-pymk.run([PhonyTarget('build', help='Build binary', depends=executable)])
+def lint_file(f: Path) -> PhonyTarget:
+    return PhonyTarget(name=f'lint-{f}', cmd=f'clang-tidy {f} -- -std=c11')
+
+lint_all = [lint_file(f) for f in Path('.').glob('**/*.[ch]')]
+
+pymk.run([
+    PhonyTarget('build', help='Build binary',          depends=executable),
+    PhonyTarget('lint',  help='Lint all source files', depends=lint_all),
+])
 ```
 
-You would build the project simply: `./build.py build`
+You would build the project with simply `./build.py build`, and lint everything with `./build.py lint`.
 
 Like `make`, `pymk` only rebuilds what it has to and implements the same up-to-date check algorithm as `make`.
 
