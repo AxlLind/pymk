@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-python3 -m mypy src/ tests/
-python3 -m ruff check src/ tests/
-python3 -m ruff format --check src/ tests/
-python3 -m pytest -v
+./build.py mypy
+./build.py lint
+./build.py fmt-ok
+./build.py test
