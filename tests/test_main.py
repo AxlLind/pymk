@@ -21,7 +21,7 @@ def pymk_variables(variables: dict[str, str]) -> Generator[None, None, None]:
     try:
         yield
     finally:
-        pymk.module.VARIABLES.clear()
+        pymk.internal.VARIABLES.clear()
 
 
 def run_pymk(targets: list[PhonyTarget]) -> tuple[int, str]:

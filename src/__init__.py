@@ -1,4 +1,4 @@
-from .module import (
+from .internal import (
     Target as Target,
     PhonyTarget as PhonyTarget,
     set_variable as set_variable,
