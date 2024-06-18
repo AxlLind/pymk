@@ -1,22 +1,22 @@
 [project]
-name = "pymk"
-version = "0.0.1"
-authors = [{ name="Axel Lindeberg" }]
-description = "A make-style build system as a Python library"
-readme = "README.md"
-requires-python = ">=3.10"
+name = 'pymk'
+version = '0.0.1'
+authors = [{ name='Axel Lindeberg' }]
+description = 'A make-style build system as a Python library'
+readme = 'README.md'
+requires-python = '>=3.10'
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
 ]
 
 [build-system]
-requires = ["setuptools>=68.3"]
-build-backend = "setuptools.build_meta"
+requires = ['setuptools>=68.3']
+build-backend = 'setuptools.build_meta'
 
 [tool.setuptools.package-dir]
-pymk = "src"
+pymk = 'src'
 
 [tool.mypy]
 disallow_untyped_defs = true
@@ -30,9 +30,15 @@ show_error_codes = true
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.lint]
+select = ['E', 'W', 'F', 'UP']
+ignore = [
+    'UP035', # deprecated-import
+]
+
 [tool.ruff.format]
-quote-style = "single"
+quote-style = 'single'
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["tests"]
+pythonpath = ['.']
+testpaths = ['tests']
