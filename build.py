@@ -1,8 +1,9 @@
 #!/usr/bin/python3
+from os import chdir
+from pathlib import Path
+
 import pymk
 from pymk import PhonyTarget
-from pathlib import Path
-from os import chdir
 
 chdir(Path(__file__).parent)
 

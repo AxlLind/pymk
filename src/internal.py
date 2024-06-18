@@ -1,12 +1,12 @@
-import re
-import sys
 import argparse
-import subprocess
-import concurrent.futures
 import collections
+import concurrent.futures
+import re
+import subprocess
+import sys
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Sequence, TypeAlias
-from concurrent.futures import ThreadPoolExecutor, Future, FIRST_COMPLETED
 
 TargetType: TypeAlias = 'Target  | PhonyTarget'
 Dependency: TypeAlias = 'Target  | PhonyTarget | Path'

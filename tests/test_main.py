@@ -1,12 +1,13 @@
 import io
-import pytest
-from typing import Generator
+from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from contextlib import redirect_stdout, contextmanager
+from typing import Generator
+
+import pytest
 
 import src as pymk
-from src import Target, PhonyTarget
+from src import PhonyTarget, Target
 
 
 @pytest.fixture
