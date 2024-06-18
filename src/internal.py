@@ -223,10 +223,10 @@ def run(jobs: int, targets: list[PhonyTarget]) -> int:
 
 def main(targets: list[PhonyTarget]) -> None:
     known_targets = dict[str, PhonyTarget]()
-    for t in targets:
-        if str(t) in known_targets:
-            raise PymkException(f'Target "{t}" defined multiple times')
-        known_targets[str(t)] = t
+    for target in targets:
+        if str(target) in known_targets:
+            raise PymkException(f'Target "{target}" defined multiple times')
+        known_targets[str(target)] = target
 
     if any(h in sys.argv[1:] for h in ['-h', '--help']):
         exit_help(targets)
