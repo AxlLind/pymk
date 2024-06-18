@@ -28,7 +28,9 @@ class Target:
     output: Path
     depends: dict[str, list[Dependency]]
 
-    def __init__(self, cmd: str, output: Path, depends: DependencyInput = {}) -> None:
+    def __init__(self, cmd: str, output: Path, depends: DependencyInput | None = None) -> None:
+        if depends is None:
+            depends = {}
         self.cmd = cmd
         self.output = output
         self.depends = simplify_dependency_input(depends)
@@ -47,9 +49,11 @@ class PhonyTarget:
         self,
         name: str,
         cmd: str | None = None,
-        depends: DependencyInput = {},
+        depends: DependencyInput | None = None,
         help: str | None = None,
     ) -> None:
+        if depends is None:
+            depends = {}
         self.name = name
         self.cmd = cmd
         self.depends = simplify_dependency_input(depends)
@@ -157,8 +161,8 @@ class TargetExecutor:
         if not isinstance(t, PhonyTarget):
             try:
                 self.modified_times[t] = modified_time(t)
-            except FileNotFoundError:
-                raise PymkException(f'Expected {t} to exist')
+            except FileNotFoundError as e:
+                raise PymkException(f'Expected {t} to exist') from e
         for dependant in self.dependants.get(t, []):
             if dependant not in self.deps_left:
                 self.deps_left[dependant] = sum(len(x) for x in dependant.depends.values())
