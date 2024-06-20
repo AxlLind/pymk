@@ -4,7 +4,7 @@ jobs:
   lints-and-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: python3 -m pip install --upgrade pip
       - run: python3 -m pip install mypy ruff pytest .
       - run: ./build.py mypy
