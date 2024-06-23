@@ -51,7 +51,7 @@ pymk.main([
 ])
 ```
 
-You would build the project with simply `./build.py build`, and lint everything with `./build.py lint`.
+You would build the project with simply `./mk.py build`, and lint everything with `./mk.py lint`.
 
 Like `make`, `pymk` only rebuilds what it has to and implements the same up-to-date check algorithm as `make`.
 

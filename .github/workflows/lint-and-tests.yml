@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 -m pip install --upgrade pip
       - run: python3 -m pip install mypy ruff pytest .
-      - run: ./build.py mypy
-      - run: ./build.py lint
-      - run: ./build.py fmt-ok
-      - run: ./build.py test
+      - run: ./mk.py mypy
+      - run: ./mk.py lint
+      - run: ./mk.py fmt-ok
+      - run: ./mk.py test

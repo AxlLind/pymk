@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-./build.py mypy
-./build.py lint
-./build.py fmt-ok
-./build.py test
+./mk.py mypy
+./mk.py lint
+./mk.py fmt-ok
+./mk.py test

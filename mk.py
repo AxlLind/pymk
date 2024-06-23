@@ -7,7 +7,7 @@ from pymk import PhonyTarget
 
 chdir(Path(__file__).parent)
 
-files = sorted([Path('build.py'), *Path('src').glob('*.py'), *Path('tests').glob('*.py')])
+files = sorted([Path('mk.py'), *Path('src').glob('*.py'), *Path('tests').glob('*.py')])
 pymk.set_variable(FILES=' '.join(str(f) for f in files))
 
 # fmt: off
