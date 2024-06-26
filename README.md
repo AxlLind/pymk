@@ -17,9 +17,11 @@ from pymk import Target, PhonyTarget
 from pathlib import Path
 from os import chdir
 
-chdir(Path(__file__).parent)
 BUILD_DIR = Path('out')
+if build_dir := pymk.get_variable('BUILD_DIR'):
+    BUILD_DIR = Path(build_dir).resolve()
 BUILD_DIR.mkdir(exist_ok=True)
+chdir(Path(__file__).parent)
 
 pymk.set_variable(
     CC='clang',
@@ -51,7 +53,12 @@ pymk.main([
 ])
 ```
 
-You would build the project with simply `./mk.py build`, and lint everything with `./mk.py lint`.
+You would build the project with simply:
+```bash
+./mk.py build                         # build everything
+./mk.py lint                          # lint everything
+./mk.py build -DBUILD_DIR=/tmp/build  # set the output directory
+```
 
 Like `make`, `pymk` only rebuilds what it has to and implements the same up-to-date check algorithm as `make`.
 

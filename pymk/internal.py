@@ -63,12 +63,33 @@ class PhonyTarget:
         return self.name
 
 
-VARIABLES = dict[str, str]()
+def parse_initial_vars() -> dict[str, str]:
+    variables = dict[str, str]()
+    args = list(reversed(sys.argv))
+    while args:
+        arg = args.pop()
+        if not arg.startswith('-D'):
+            continue
+        s = arg[2:]
+        if not s:
+            if not args:
+                break
+            s = args.pop()
+        var, *rest = s.split('=', maxsplit=1)
+        variables[var] = rest[0] if rest else ''
+    return variables
+
+
+VARIABLES = parse_initial_vars()
 VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9_]+|\([A-Za-z0-9_]+\))')
 
 
 def set_variable(**variables: str) -> None:
     VARIABLES.update(variables)
+
+
+def get_variable(var: str, default: str | None = None) -> str | None:
+    return VARIABLES.get(var, default)
 
 
 def expand_cmd(t: TargetType) -> str:
@@ -237,7 +258,7 @@ def main(targets: list[PhonyTarget]) -> None:
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-j', '--jobs', type=int, default=0)
-    parser.add_argument('-D', '--var', action='append', default=[])
+    parser.add_argument('-D', action='append', default=[])
     parser.add_argument('targets', nargs='*')
     opts = parser.parse_args()
 
@@ -246,8 +267,4 @@ def main(targets: list[PhonyTarget]) -> None:
     for t in opts.targets:
         if t not in known_targets:
             exit_help(targets, f'unknown target "{t}"')
-
-    for s in opts.var:
-        var, *rest = s.split('=', maxsplit=1)
-        set_variable(**{var: rest[0] if rest else ''})
     sys.exit(run(opts.jobs, [known_targets[t] for t in opts.targets]))
