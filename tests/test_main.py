@@ -6,8 +6,8 @@ from typing import Generator
 
 import pytest
 
-import src as pymk
-from src import PhonyTarget, Target
+import pymk
+from pymk import PhonyTarget, Target
 
 
 @pytest.fixture
