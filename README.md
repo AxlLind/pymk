@@ -7,6 +7,8 @@ While `make` certainly is powerful, it's syntax and odd quirks makes it a pain t
 
 You write your entire build system as a Python script which defines your targets and dependencies, and `pymk` builds your targets efficiently. This means defining special logic, which eventually always happens as your project becomes more complicated, means just writing regular Python code. No bash, no unintuitive string handling in make, no new made-up programming language that sucks, and no godawful what-ever CMake tries to be. Just Python.
 
+Like `make`, `pymk` only rebuilds what it has to and implements the same up-to-date check algorithm as `make`.
+
 ## Example
 What would this look like for a simple C project?
 
@@ -48,8 +50,8 @@ def lint_file(f: Path) -> PhonyTarget:
 lint_all = [lint_file(f) for f in Path('.').glob('**/*.[ch]')]
 
 pymk.main([
-    PhonyTarget('build', help='Build binary',          depends=executable),
-    PhonyTarget('lint',  help='Lint all source files', depends=lint_all),
+    PhonyTarget('build', help='Build binary',      depends=executable),
+    PhonyTarget('lint',  help='Lint source files', depends=lint_all),
 ])
 ```
 
@@ -57,18 +59,30 @@ You would build the project with simply:
 ```bash
 ./mk.py build                         # build everything
 ./mk.py lint                          # lint everything
-./mk.py build -DBUILD_DIR=/tmp/build  # set the output directory
+./mk.py build -DBUILD_DIR=/tmp/build  # set a different build dir
 ```
 
-Like `make`, `pymk` only rebuilds what it has to and implements the same up-to-date check algorithm as `make`.
+`pymk` automatically generates the help message for you:
+
+```
+$ ./mk.py
+usage: test.py [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..
+
+TARGET:
+  build  Build binary
+  lint   Lint source files
+
+OPTIONS:
+  -j, --jobs JOBS        number of parallel jobs (default 0=infinite)
+  -D, --var VAR[=VALUE]  set a variable, example -DCC=gcc-11
+  -h, --help             print this help message and exit
+```
 
 ---
 
 Need to select a different compiler based on the OS? Just write some damn Python code:
 
 ```python
-import sys
-
 if sys.platform == 'win32':
     CC = 'cl.exe'
     CFLAGS = '/std:c11 /O3 /W4'
