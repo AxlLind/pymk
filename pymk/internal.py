@@ -1,10 +1,11 @@
-import argparse
 import collections
 import concurrent.futures
+import getopt
 import re
 import subprocess
 import sys
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence, TypeAlias
 
@@ -63,29 +64,48 @@ class PhonyTarget:
         return self.name
 
 
-def parse_initial_vars() -> dict[str, str]:
-    variables = dict[str, str]()
-    args = list(reversed(sys.argv))
-    while args:
-        arg = args.pop()
-        if not arg.startswith('-D'):
-            continue
-        s = arg[2:]
-        if not s:
-            if not args:
-                break
-            s = args.pop()
-        var, *rest = s.split('=', maxsplit=1)
-        variables[var] = rest[0] if rest else ''
-    return variables
+@dataclass
+class Arguments:
+    targets: list[str]
+    variables: dict[str, str]
+    jobs: int = 0
+    print_help: bool = False
+    error: str | None = None
+
+    @staticmethod
+    def parse(arguments: list[str]) -> 'Arguments':
+        args = Arguments([], {})
+        try:
+            opts, args.targets = getopt.gnu_getopt(arguments, 'hj:D:', longopts=['help', 'jobs'])
+        except getopt.GetoptError as e:
+            args.error = str(e)
+            return args
+        for opt, val in opts:
+            match opt:
+                case '-h' | '--help':
+                    args.print_help = True
+                case '-j' | '--jobs':
+                    try:
+                        args.jobs = int(val)
+                    except ValueError:
+                        args.error = f'invalid jobs integer "{val}"'
+                case '-D':
+                    var, *rest = val.split('=', maxsplit=1)
+                    args.variables[var] = rest[0] if rest else ''
+                case _:
+                    raise AssertionError('unreachable')
+        return args
 
 
-VARIABLES = parse_initial_vars()
+ARGS = Arguments.parse(sys.argv[1:])
+VARIABLES = {k: v for k, v in ARGS.variables.items()}
 VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9_]+|\([A-Za-z0-9_]+\))')
 
 
 def set_variable(**variables: str) -> None:
-    VARIABLES.update(variables)
+    for k, v in variables.items():
+        if k not in ARGS.variables:
+            VARIABLES[k] = v
 
 
 def get_variable(var: str, default: str | None = None) -> str | None:
@@ -216,7 +236,7 @@ class TargetExecutor:
 
 
 def exit_help(targets: Sequence[PhonyTarget], error: str | None = None) -> None:
-    print(f'usage: {sys.argv[0]} [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..')
+    print(f'usage: {sys.argv[0]} [-h] [-j JOBS] [-DVAR[=VALUE]] [TARGET..]')
     if error:
         print('error:', error)
         sys.exit(2)
@@ -224,11 +244,11 @@ def exit_help(targets: Sequence[PhonyTarget], error: str | None = None) -> None:
     print('TARGET:')
     maxlen = max(len(t.name) for t in targets)
     for t in targets:
-        print(f'  {t.name.ljust(maxlen)}  {t.help if t.help else ""}')
+        print(f'  {t.name.ljust(maxlen)}  {t.help if t.help else ""}'.rstrip())
     print()
     print('OPTIONS:')
     print('  -j, --jobs JOBS        number of parallel jobs (default 0=infinite)')
-    print('  -D, --var VAR[=VALUE]  set a variable, example -DCC=gcc-11')
+    print('  -D, --var VAR[=VALUE]  set a variable (example -DCC=gcc-11)')
     print('  -h, --help             print this help message and exit')
     sys.exit(0)
 
@@ -253,18 +273,13 @@ def main(targets: list[PhonyTarget]) -> None:
             raise PymkException(f'Target "{target}" defined multiple times')
         known_targets[str(target)] = target
 
-    if any(h in sys.argv[1:] for h in ['-h', '--help']):
+    if not known_targets:
+        raise PymkException('empty target list given to pymk.main')
+    if ARGS.error:
+        exit_help(targets, ARGS.error)
+    if ARGS.print_help or not ARGS.targets:
         exit_help(targets)
+    if unknown_targets := [t for t in ARGS.targets if t not in known_targets]:
+        exit_help(targets, f'unknown target(s): {" ".join(unknown_targets)}')
 
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-j', '--jobs', type=int, default=0)
-    parser.add_argument('-D', action='append', default=[])
-    parser.add_argument('targets', nargs='*')
-    opts = parser.parse_args()
-
-    if not opts.targets:
-        exit_help(targets)
-    for t in opts.targets:
-        if t not in known_targets:
-            exit_help(targets, f'unknown target "{t}"')
-    sys.exit(run(opts.jobs, [known_targets[t] for t in opts.targets]))
+    sys.exit(run(ARGS.jobs, [known_targets[t] for t in ARGS.targets]))
