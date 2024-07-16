@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 -m pip install --upgrade pip
-      - run: python3 -m pip install mypy ruff pytest .
+      - run: python3 -m pip install '.[dev]'
       - run: ./mk.py mypy
       - run: ./mk.py lint
       - run: ./mk.py fmt-ok

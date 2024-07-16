@@ -15,6 +15,13 @@ classifiers = [
 requires = ['setuptools>=68.3']
 build-backend = 'setuptools.build_meta'
 
+[project.optional-dependencies]
+dev = [
+    'mypy',
+    'ruff',
+    'pytest',
+]
+
 [tool.mypy]
 strict = true
 
