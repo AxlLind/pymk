@@ -99,7 +99,7 @@ class Arguments:
 
 ARGS = Arguments.parse(sys.argv[1:])
 VARIABLES = {k: v for k, v in ARGS.variables.items()}
-VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9_]+|\([A-Za-z0-9_]+\)|{[A-Za-z0-9_]+})')
+VAR_SUBST_REGEX = re.compile(r'\$(\$|\w+|\(\w+\)|{\w+})')
 
 
 def set_variable(**variables: str) -> None:
