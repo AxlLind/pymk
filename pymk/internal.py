@@ -99,7 +99,7 @@ class Arguments:
 
 ARGS = Arguments.parse(sys.argv[1:])
 VARIABLES = {k: v for k, v in ARGS.variables.items()}
-VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9_]+|\([A-Za-z0-9_]+\))')
+VAR_SUBST_REGEX = re.compile(r'\$(\$|[A-Za-z0-9_]+|\([A-Za-z0-9_]+\)|{[A-Za-z0-9_]+})')
 
 
 def set_variable(**variables: str) -> None:
@@ -114,7 +114,7 @@ def get_variable(var: str, default: str | None = None) -> str | None:
 
 def expand_cmd(t: TargetType) -> str:
     def get_variable(m: re.Match[str]) -> str:
-        var = m.group(1).replace('(', '').replace(')', '')
+        var = ''.join(c for c in m.group(1) if c not in '(){}')
         if var == '$':
             return '$'
         if var == 'OUTPUT' and isinstance(t, Target):

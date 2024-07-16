@@ -45,7 +45,7 @@ def test_var_expansion(tmpdir: Path) -> None:
                 PhonyTarget('0', cmd='echo $dependency > /dev/null', depends={'dependency': refers_to_output}),
                 PhonyTarget('1', cmd='echo $$VAR > /dev/null'),
                 PhonyTarget('2', cmd='echo $A$B$C > /dev/null'),
-                PhonyTarget('3', cmd='echo $(A)aa > /dev/null'),
+                PhonyTarget('3', cmd='echo $(A)a${B} > /dev/null'),
                 PhonyTarget('4', cmd='echo $A/next/to/path > /dev/null'),
                 PhonyTarget('6', cmd='$ECHO expansions at edges > $DEV_NULL'),
             ]
@@ -55,7 +55,7 @@ def test_var_expansion(tmpdir: Path) -> None:
         assert f'echo {tmpdir / "tmp.txt"} > /dev/null' in output
         assert 'echo $VAR > /dev/null' in output
         assert 'echo abc > /dev/null' in output
-        assert 'echo aaa > /dev/null' in output
+        assert 'echo aab > /dev/null' in output
         assert 'echo a/next/to/path > /dev/null' in output
         assert 'echo expansions at edges > /dev/null' in output
 
