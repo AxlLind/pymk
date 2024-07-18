@@ -66,7 +66,7 @@ You would build the project with simply:
 
 ```
 $ ./mk.py
-usage: test.py [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..
+usage: ./mk.py [-h] [-j [JOBS]] [-DVAR[=VALUE]] TARGET..
 
 TARGET:
   build  Build binary
