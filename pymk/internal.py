@@ -1,4 +1,5 @@
-""" Internal implementation of pymk, do not import from here. """
+"""Internal implementation of pymk, do not import from here."""
+
 import collections
 import concurrent.futures
 import getopt
@@ -16,7 +17,8 @@ DependencyInput: TypeAlias = Dependency | Sequence[Dependency] | dict[str, Depen
 
 
 class PymkException(Exception):
-    """ An exception raised in pymk for internal errors """
+    """An exception raised in pymk for internal errors"""
+
     pass
 
 
@@ -41,6 +43,7 @@ class Target:
     Since it depends on 'c_file' pymk will only rebuild this target
     when the file has been updated.
     """
+
     cmd: str
     output: Path
     depends: dict[str, list[Dependency]]
@@ -72,6 +75,7 @@ class PhonyTarget:
     exe = Target(cmd='gcc ...', depends={...} output='...')
     PhonyTarget('build', help='Build the binary', depends=exe_target)
     """
+
     name: str
     cmd: str | None
     depends: dict[str, list[Dependency]]
@@ -134,14 +138,14 @@ VAR_SUBST_REGEX = re.compile(r'\$(\$|\w+|\(\w+\)|{\w+})')
 
 
 def set_variable(**variables: str) -> None:
-    """ Set one or more pymk variables """
+    """Set one or more pymk variables"""
     for k, v in variables.items():
         if k not in ARGS.variables:
             VARIABLES[k] = v
 
 
 def get_variable(var: str, default: str | None = None) -> str | None:
-    """ Get the value of a pymk-variable. """
+    """Get the value of a pymk-variable."""
     return VARIABLES.get(var, default)
 
 
