@@ -80,3 +80,10 @@ def test_simple_dependencies(tmpdir: Path) -> None:
     assert f'echo c > {tmpdir / "c.txt"}' in output
     assert f'cat {tmpdir / "a.txt"} {tmpdir / "b.txt"} {tmpdir / "c.txt"} > {tmpdir / "abc.txt"}' in output
     assert (tmpdir / 'abc.txt').read_text() == 'a\nb\nc\n'
+
+
+def test_exported_has_docstring() -> None:
+    for x in dir(pymk):
+        if x.startswith('__'):
+            continue
+        assert isinstance(getattr(pymk, x).__doc__, str)

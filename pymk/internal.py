@@ -1,3 +1,4 @@
+""" Internal implementation of pymk, do not import from here. """
 import collections
 import concurrent.futures
 import getopt
@@ -15,6 +16,7 @@ DependencyInput: TypeAlias = Dependency | Sequence[Dependency] | dict[str, Depen
 
 
 class PymkException(Exception):
+    """ An exception raised in pymk for internal errors """
     pass
 
 
@@ -25,6 +27,20 @@ def simplify_dependency_input(depends: DependencyInput) -> dict[str, list[Depend
 
 
 class Target:
+    """
+    Represents a target that generates a file via some command.
+
+    For example, a target compiling a C-file:
+
+        Target(
+            cmd='$CC $CFLAGS -c $SRC -o $OUTPUT',
+            depends={'SRC': c_file},
+            output=BUILD_DIR / c_file.name.replace('.c', '.o'),
+        )
+
+    Since it depends on 'c_file' pymk will only rebuild this target
+    when the file has been updated.
+    """
     cmd: str
     output: Path
     depends: dict[str, list[Dependency]]
@@ -41,6 +57,21 @@ class Target:
 
 
 class PhonyTarget:
+    """
+    Represents a target that does not generate a file.
+    It's simply an alias for one or more Target objects,
+    listed as dependencies of this PhonyTarget, and/or
+    optionally an alias of some command.
+
+    Example, an alias for a command:
+
+    PhonyTarget('mypy', help='Type checking', cmd='python3 -m mypy $FILES')
+
+    Example, an alias for a Target:
+
+    exe = Target(cmd='gcc ...', depends={...} output='...')
+    PhonyTarget('build', help='Build the binary', depends=exe_target)
+    """
     name: str
     cmd: str | None
     depends: dict[str, list[Dependency]]
@@ -103,12 +134,14 @@ VAR_SUBST_REGEX = re.compile(r'\$(\$|\w+|\(\w+\)|{\w+})')
 
 
 def set_variable(**variables: str) -> None:
+    """ Set one or more pymk variables """
     for k, v in variables.items():
         if k not in ARGS.variables:
             VARIABLES[k] = v
 
 
 def get_variable(var: str, default: str | None = None) -> str | None:
+    """ Get the value of a pymk-variable. """
     return VARIABLES.get(var, default)
 
 
@@ -254,6 +287,13 @@ def exit_help(targets: Sequence[PhonyTarget], error: str | None = None) -> None:
 
 
 def run(jobs: int, targets: list[PhonyTarget]) -> int:
+    """
+    Run the pymk build system, without generating
+    help text, parsing arguments, or exiting the
+    program afterwards.
+
+    Builds ALL PhonyTarget:s passed in.
+    """
     try:
         executor = TargetExecutor(jobs)
         executor.execute(targets)
@@ -267,6 +307,16 @@ def run(jobs: int, targets: list[PhonyTarget]) -> int:
 
 
 def main(targets: list[PhonyTarget]) -> None:
+    """
+    Run the pymk build system.
+
+    The input list of PhonyTarget:s acts as the
+    entrypoint to your builds. This function
+    automatically parses sys.argv and generates
+    help-text if '-h' or '--help' is provided.
+
+    This function exits the program.
+    """
     known_targets = dict[str, PhonyTarget]()
     for target in targets:
         if str(target) in known_targets:
